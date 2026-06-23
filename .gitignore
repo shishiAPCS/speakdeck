@@ -1,0 +1,19 @@
+# Whisper models
+*.bin
+*.gguf
+
+# Student audio / media
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.flac
+*.mp4
+*.mov
+
+# macOS
+.DS_Store
+
+# Local temp files
+*.log
+.tmp/

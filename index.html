@@ -1,0 +1,2140 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>SpeakDeck · Mr.Mou English Lab</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <script src="coi-serviceworker.js?v=20250814"></script>
+    <style>
+      :root {
+        --pixel-font: 'VT323', 'Courier New', Menlo, Monaco, monospace;
+        --ui-font: 'VT323', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Courier New', monospace;
+        --bg-color: #242424;
+        --panel-bg: #e8e8e4;
+        --panel-soft: #f7f5ed;
+        --paper-bg: #fffdf4;
+        --ink: #111;
+        --muted-text: #545454;
+        --border-color: #000;
+        --primary-color: #2f7ed8;
+        --primary-dark: #1559a6;
+        --success-color: #2f8f42;
+        --warning-color: #ffd75a;
+        --danger-color: #d94a40;
+        --scanner-bg: #0a0d0a;
+        --scanner-text: #00ff6a;
+        --shadow-hard: 6px 6px 0 rgba(0,0,0,.6);
+        --shadow-soft: 0 16px 36px rgba(0,0,0,.28);
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; min-height: 100%; }
+
+      body {
+        font-family: var(--ui-font);
+        background:
+          linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+          radial-gradient(circle at top, rgba(255,255,255,.07), transparent 44%),
+          var(--bg-color);
+        background-size: 16px 16px, 16px 16px, auto, auto;
+        color: var(--ink);
+        padding: 18px;
+      }
+
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(255,255,255,0.03),
+          rgba(255,255,255,0.03) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+        mix-blend-mode: screen;
+        opacity: .4;
+      }
+
+      #main-container {
+        width: min(1400px, 96vw);
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+      }
+
+      .rpg-box {
+        background: linear-gradient(#f1f1ee, #deded8);
+        border: 6px solid var(--border-color);
+        box-shadow: var(--shadow-hard);
+        border-radius: 3px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 18px 22px;
+        margin-bottom: 16px;
+      }
+
+      .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+      .logo { width: 54px; height: 54px; image-rendering: pixelated; object-fit: contain; }
+      .eyebrow { font-size: 1.1rem; color: var(--muted-text); letter-spacing: 2px; }
+      h1 { font-size: clamp(2.4rem, 5vw, 4.4rem); margin: 0; line-height: .9; letter-spacing: 2px; }
+      .subtitle { font-size: 1.35rem; color: #333; margin-top: 8px; }
+      h2, h3 { margin: 0; letter-spacing: 1px; }
+      h2 { font-size: 2rem; }
+      h3 { font-size: 1.45rem; }
+      p, li { font-size: 1.25rem; }
+      code { font-family: var(--pixel-font); background: rgba(255,255,255,.75); padding: 0 4px; border: 2px solid #aaa; }
+
+      .status-chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 4px solid var(--border-color);
+        background: linear-gradient(#fff, #dcdcdc);
+        padding: 7px 12px;
+        font-size: 1.2rem;
+        box-shadow: 3px 3px 0 #000;
+        white-space: nowrap;
+      }
+      .chip.green { background: linear-gradient(#d8ffd3, #9be890); }
+      .chip.yellow { background: linear-gradient(#fff5a8, #ffd54f); }
+
+      .system-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+        gap: 14px;
+        align-items: stretch;
+        margin-bottom: 16px;
+        padding: 12px;
+        background: linear-gradient(#303030, #171717);
+        border: 5px solid #0b0b0b;
+        box-shadow: var(--shadow-hard), inset 0 1px 0 rgba(255,255,255,.16);
+      }
+
+      .system-chip {
+        display: grid;
+        grid-template-columns: 18px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+        padding: 8px 10px;
+        color: #f7f7f7;
+        border-right: 2px solid rgba(255,255,255,.22);
+        min-width: 0;
+      }
+      .system-chip:last-of-type { border-right: none; }
+      .system-chip strong { display: block; font-size: 1.35rem; line-height: 1.05; }
+      .system-chip span:last-child, .system-chip .system-sub {
+        color: #d0d0d0;
+        font-size: 1.1rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .status-light {
+        width: 18px;
+        height: 18px;
+        margin-top: 4px;
+        border: 3px solid #050505;
+        border-radius: 50%;
+        background: #777;
+        box-shadow: inset 2px 2px 3px rgba(255,255,255,.28), 0 0 10px rgba(255,255,255,.15);
+      }
+      .system-chip[data-state="ready"] .status-light,
+      .system-chip[data-state="done"] .status-light { background: #61d65d; box-shadow: 0 0 12px rgba(97,214,93,.8), inset 2px 2px 3px rgba(255,255,255,.35); }
+      .system-chip[data-state="working"] .status-light,
+      .system-chip[data-state="idle"] .status-light { background: #ffd64f; box-shadow: 0 0 12px rgba(255,214,79,.7), inset 2px 2px 3px rgba(255,255,255,.35); }
+      .system-chip[data-state="error"] .status-light { background: #e64f47; box-shadow: 0 0 12px rgba(230,79,71,.75), inset 2px 2px 3px rgba(255,255,255,.35); }
+
+      .model-bay-trigger {
+        align-self: center;
+        min-height: 48px;
+        background: linear-gradient(#fcfcfc, #c9c9c9);
+        color: #111;
+      }
+
+      .workstation {
+        display: grid;
+        grid-template-columns: minmax(330px, 410px) minmax(0, 1fr);
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      .deck-panel, .transcript-panel {
+        padding: 14px;
+        min-height: 0;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 4px solid var(--border-color);
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+      }
+
+      .step-badge {
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 4px solid var(--border-color);
+        background: linear-gradient(#4fa1ff, #1d65b2);
+        color: #fff;
+        box-shadow: 3px 3px 0 #000;
+        font-size: 1.5rem;
+        flex: 0 0 auto;
+      }
+
+      .small { font-size: 1.15rem; color: #333; }
+      .help-text { color: #333; margin: 8px 0 12px; }
+      .audio-hint { font-size: 1.08rem; color: var(--muted-text); margin-top: 8px; }
+
+      label { font-size: 1.25rem; font-weight: 700; }
+      .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+      .rpg-btn, .btn, .file-btn {
+        font-family: var(--ui-font);
+        font-size: 1.45rem;
+        padding: 10px 16px;
+        border: 4px solid var(--border-color);
+        background: linear-gradient(#fff, #d8d8d8);
+        color: #111;
+        cursor: pointer;
+        box-shadow: 4px 4px 0 var(--border-color), inset 1px 1px 0 rgba(255,255,255,.8);
+        transition: transform .08s, box-shadow .08s, filter .08s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        text-decoration: none;
+      }
+      .rpg-btn:hover, .btn:hover, .file-btn:hover { filter: brightness(.97); }
+      .rpg-btn:active, .btn:active, .file-btn:active {
+        transform: translate(4px, 4px);
+        box-shadow: 0 0 0 var(--border-color), inset 2px 2px 4px rgba(0,0,0,.22);
+      }
+      .btn-primary { background: linear-gradient(#58a4f3, #246dc5); color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,.35); }
+      .btn-secondary { background: linear-gradient(#fff, #d1d1d1); }
+      .btn-danger { background: linear-gradient(#ff7e72, #c73932); color: #fff; }
+      .btn-success { background: linear-gradient(#50be61, #267d35); color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,.3); }
+      .btn-warning { background: linear-gradient(#fff3a4, #f6c942); color: #111; }
+      .btn[disabled] { opacity: .58; cursor: not-allowed; filter: grayscale(.25); }
+      .btn.btn-warning[disabled] { opacity: 1; filter: none; }
+      .btn[disabled]:active { transform: none; box-shadow: 4px 4px 0 var(--border-color); }
+
+      .native-file {
+        font-family: var(--ui-font);
+        font-size: 1.15rem;
+        width: 100%;
+        border: 4px solid var(--border-color);
+        background: #fff;
+        padding: 9px;
+      }
+
+      .file-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        border: 4px solid #000;
+        background: #fff;
+        padding: 8px;
+        box-shadow: inset 0 0 0 2px #ddd;
+      }
+      .file-strip .native-file { border: 0; padding: 0; box-shadow: none; min-width: 0; }
+      #student-audio-size { font-size: 1.05rem; color: #333; white-space: nowrap; }
+
+      .deck-machine {
+        margin-top: 14px;
+        border: 5px solid #111;
+        background:
+          linear-gradient(90deg, rgba(255,255,255,.25), transparent 18%, rgba(255,255,255,.18) 52%, transparent 76%),
+          linear-gradient(#d9d7d0, #aeadab);
+        box-shadow: inset 0 0 0 3px #eee, inset 0 -10px 22px rgba(0,0,0,.12), 4px 4px 0 #000;
+        padding: 12px;
+        position: relative;
+      }
+      .deck-machine::before,
+      .deck-machine::after,
+      .screw {
+        content: '';
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border: 3px solid #111;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #fff, #8b8b8b 45%, #333 46%, #aaa 70%);
+      }
+      .deck-machine::before { top: 8px; left: 8px; }
+      .deck-machine::after { top: 8px; right: 8px; }
+      .screw.bottom-left { bottom: 8px; left: 8px; }
+      .screw.bottom-right { bottom: 8px; right: 8px; }
+
+      .deck-label {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 22px 8px;
+        font-size: 1.05rem;
+        color: #333;
+        letter-spacing: 2px;
+      }
+
+      .cassette-window {
+        margin: 0 18px 10px;
+        min-height: 126px;
+        border: 5px solid #111;
+        background:
+          radial-gradient(circle at 25% 34%, rgba(255,255,255,.08), transparent 18%),
+          radial-gradient(circle at 75% 34%, rgba(255,255,255,.08), transparent 18%),
+          linear-gradient(90deg, #151515, #2b2b2b 45%, #141414),
+          #181818;
+        box-shadow: inset 0 0 18px rgba(0,0,0,.85), 0 2px 0 rgba(255,255,255,.45);
+        border-radius: 18px;
+        position: relative;
+        overflow: hidden;
+      }
+      .cassette-window::before {
+        content: '';
+        position: absolute;
+        left: 34%;
+        right: 34%;
+        top: 34px;
+        height: 34px;
+        background: linear-gradient(#5a5a5a, #151515);
+        border: 3px solid #111;
+        box-shadow: inset 0 0 8px rgba(0,0,0,.75);
+      }
+      .cassette-window::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        bottom: 11px;
+        width: min(134px, 48%);
+        height: 32px;
+        transform: translateX(-50%);
+        border: 3px solid #070707;
+        background: linear-gradient(#0f0f0f, #050505);
+        box-shadow: inset 0 0 10px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.22);
+        border-radius: 3px;
+      }
+      .reel {
+        position: absolute;
+        top: 18px;
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        border: 6px solid #d8d8d8;
+        background:
+          radial-gradient(circle, #070707 0 20%, transparent 21% 29%, #111 30% 36%, transparent 37%),
+          repeating-conic-gradient(#111 0 14deg, #777 15deg 24deg, #111 25deg 38deg);
+        box-shadow: 0 0 0 5px #151515, inset 0 0 0 4px #222;
+        transform-origin: 50% 50%;
+        will-change: transform;
+        z-index: 2;
+      }
+      .reel.left { left: 58px; }
+      .reel.right { right: 58px; }
+      .deck-machine.is-playing .reel {
+        animation: cassette-reel-spin 1.1s linear infinite;
+      }
+      .deck-machine.is-playing .reel.right {
+        animation-duration: .95s;
+      }
+      @keyframes cassette-reel-spin {
+        to { transform: rotate(360deg); }
+      }
+      .meter-label {
+        position: absolute;
+        left: 50%;
+        bottom: 32px;
+        transform: translateX(-50%);
+        color: #92ff80;
+        font-size: .78rem;
+        letter-spacing: 1.8px;
+        text-shadow: 0 0 5px rgba(120,255,110,.45);
+        white-space: nowrap;
+        z-index: 3;
+        opacity: .88;
+      }
+      .meter {
+        position: absolute;
+        left: 50%;
+        bottom: 17px;
+        width: min(104px, 38%);
+        height: 12px;
+        transform: translateX(-50%);
+        background: #061506;
+        border: 2px solid #1c1c1c;
+        box-shadow: inset 0 0 5px rgba(0,0,0,.85), 0 0 10px rgba(85,255,82,.22);
+        z-index: 3;
+        overflow: hidden;
+      }
+      .meter::before {
+        content: '';
+        position: absolute;
+        left: 2px;
+        top: 2px;
+        bottom: 2px;
+        width: 56%;
+        background: repeating-linear-gradient(90deg, #55ff52 0 5px, transparent 5px 9px);
+        filter: brightness(.92);
+        box-shadow: 0 0 12px rgba(85,255,82,.45);
+      }
+      .deck-machine.is-playing .meter::before {
+        animation: led-level-dance .95s steps(1, end) infinite;
+      }
+      .deck-machine.is-playing .meter {
+        box-shadow: inset 0 0 5px rgba(0,0,0,.85), 0 0 14px rgba(85,255,82,.36);
+      }
+      @keyframes led-level-dance {
+        0% { width: 42%; filter: brightness(.88); }
+        12% { width: 78%; filter: brightness(1.18); }
+        25% { width: 55%; filter: brightness(.98); }
+        38% { width: 92%; filter: brightness(1.3); }
+        52% { width: 62%; filter: brightness(1.05); }
+        68% { width: 84%; filter: brightness(1.22); }
+        82% { width: 48%; filter: brightness(.94); }
+        100% { width: 72%; filter: brightness(1.12); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .deck-machine.is-playing .reel,
+        .deck-machine.is-playing .meter::before { animation: none; }
+      }
+
+      .deck-display {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        background: linear-gradient(#0a0a0a, #202020);
+        border: 4px solid #000;
+        color: #94ff81;
+        padding: 8px 10px;
+        margin: 0 4px 10px;
+        box-shadow: inset 0 0 0 2px #333;
+      }
+      .clock-current { font-size: 2.15rem; text-shadow: 0 0 8px rgba(148,255,129,.65); min-width: 76px; }
+      .clock-duration { color: #d5d5d5; font-size: 1.35rem; min-width: 58px; text-align: right; }
+      .deck-seek {
+        width: 100%;
+        accent-color: var(--primary-color);
+        cursor: pointer;
+      }
+
+      .transport-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .transport-btn {
+        min-height: 50px;
+        font-size: 1.55rem;
+        padding: 6px 8px;
+      }
+      .transport-btn.main-play { background: linear-gradient(#59a8ff, #1f68bd); color: #fff; font-size: 1.8rem; }
+      .transport-btn.main-play.is-playing {
+        background: linear-gradient(#1f6fc8, #2f91ef);
+        box-shadow: inset 3px 3px 0 rgba(0,0,0,.35), 2px 2px 0 #000;
+        transform: translate(2px, 2px);
+      }
+      .transport-btn.icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .speaker-icon {
+        width: 34px;
+        height: 28px;
+        display: inline-block;
+        position: relative;
+        filter: drop-shadow(1px 1px 0 rgba(255,255,255,.45));
+      }
+      .speaker-icon::before {
+        content: '';
+        position: absolute;
+        left: 3px;
+        top: 9px;
+        width: 8px;
+        height: 10px;
+        background: #111;
+        border-radius: 1px;
+      }
+      .speaker-icon::after {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 5px;
+        width: 0;
+        height: 0;
+        border-top: 9px solid transparent;
+        border-bottom: 9px solid transparent;
+        border-right: 13px solid #111;
+      }
+      .sound-wave {
+        position: absolute;
+        border: 3px solid #111;
+        border-left: 0;
+        border-top-color: transparent;
+        border-bottom-color: transparent;
+        border-radius: 0 999px 999px 0;
+        opacity: .9;
+      }
+      .sound-wave.wave-1 {
+        left: 22px;
+        top: 9px;
+        width: 7px;
+        height: 10px;
+      }
+      .sound-wave.wave-2 {
+        left: 26px;
+        top: 6px;
+        width: 10px;
+        height: 16px;
+      }
+      .speaker-slash {
+        display: none;
+        position: absolute;
+        left: 18px;
+        top: 3px;
+        width: 4px;
+        height: 24px;
+        background: #111;
+        transform: rotate(-38deg);
+        border-left: 1px solid rgba(255,255,255,.6);
+        box-shadow: 2px 0 0 rgba(255,255,255,.25);
+      }
+      #deck-mute-button.is-muted .sound-wave { display: none; }
+      #deck-mute-button.is-muted .speaker-slash { display: block; }
+      #audio-preview { display: none; }
+
+      .big-action {
+        width: 100%;
+        font-size: 2.05rem;
+        padding: 16px 18px;
+        line-height: 1.05;
+        text-align: center;
+        margin-top: 12px;
+        white-space: normal;
+      }
+      .copy-action { margin-top: 12px; }
+      .action-number {
+        width: 30px;
+        height: 30px;
+        margin-right: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid #000;
+        background: rgba(255,255,255,.22);
+      }
+
+      .ai-shortcuts {
+        border: 4px solid #000;
+        background: #e2e2de;
+        margin-top: 12px;
+        padding: 10px;
+        box-shadow: inset 0 0 0 2px #f7f7f7;
+      }
+      .ai-shortcuts h3 { font-size: 1.25rem; margin-bottom: 8px; }
+      .ai-links {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .ai-link {
+        min-height: 40px;
+        padding: 6px 10px;
+        font-size: 1.12rem;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .ai-icon {
+        width: 24px;
+        height: 24px;
+        flex: 0 0 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        border: 2px solid #111;
+        box-shadow: inset 1px 1px 0 rgba(255,255,255,.65), 1px 1px 0 rgba(0,0,0,.35);
+        font-family: Arial, sans-serif;
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1;
+      }
+      .ai-icon.doubao {
+        border-radius: 50%;
+        background: radial-gradient(circle at 38% 35%, #fff 0 8%, transparent 9%),
+                    radial-gradient(circle at 64% 35%, #fff 0 8%, transparent 9%),
+                    linear-gradient(135deg, #f7c9bd, #85c8ef);
+      }
+      .ai-icon.doubao::after {
+        content: '';
+        position: absolute;
+        left: 7px;
+        right: 7px;
+        bottom: 6px;
+        height: 3px;
+        border-bottom: 2px solid #111;
+        border-radius: 50%;
+      }
+      .ai-icon.deepseek {
+        border-radius: 50% 45% 50% 45%;
+        color: #fff;
+        background: linear-gradient(135deg, #6ea6ff, #3457d5);
+        transform: rotate(-10deg);
+      }
+      .ai-icon.deepseek::before {
+        content: '∿';
+        transform: rotate(10deg);
+        font-size: 21px;
+        margin-top: -2px;
+      }
+      .ai-icon.kimi {
+        border-radius: 4px;
+        color: #fff;
+        background: #111;
+      }
+      .ai-icon.kimi::before { content: 'K'; }
+      .ai-icon.yuanbao {
+        border-radius: 50%;
+        color: #1b5e20;
+        background: radial-gradient(circle at 34% 30%, #ecffe2 0 18%, transparent 19%), linear-gradient(135deg, #baf7a2, #4caf50);
+      }
+      .ai-icon.yuanbao::before { content: '●'; font-size: 12px; opacity: .55; }
+      .ai-icon.qwen {
+        border-radius: 6px;
+        color: #6f42d8;
+        background: #f6f1ff;
+      }
+      .ai-icon.qwen::before { content: '✦'; font-size: 21px; }
+      .ai-icon.wenxin {
+        border-radius: 5px;
+        color: #fff;
+        background: linear-gradient(135deg, #7ed0ff, #356fe6);
+      }
+      .ai-icon.wenxin::before { content: '◇'; font-size: 19px; }
+      .ai-icon.qingyan {
+        border-radius: 50% 0 50% 50%;
+        color: #0f6b3b;
+        background: linear-gradient(135deg, #c8f7c5, #4dbb7f);
+        transform: rotate(-18deg);
+      }
+      .ai-icon.qingyan::before {
+        content: '';
+        width: 12px;
+        height: 2px;
+        background: rgba(15,107,59,.75);
+        transform: rotate(45deg);
+      }
+      .ai-icon.chatgpt {
+        border-radius: 50%;
+        color: #0f5f43;
+        background:
+          radial-gradient(circle at 36% 32%, rgba(255,255,255,.92) 0 13%, transparent 14%),
+          conic-gradient(from 25deg, #c8f7dc, #6ed39a, #e2fff0, #43b978, #c8f7dc);
+      }
+      .ai-icon.chatgpt::before {
+        content: 'GPT';
+        font-size: 8px;
+        letter-spacing: -.5px;
+        border: 1px solid rgba(15,95,67,.75);
+        border-radius: 999px;
+        padding: 3px 2px;
+        background: rgba(255,255,255,.64);
+      }
+
+      .transcript-panel {
+        background:
+          linear-gradient(#fbfaf4, #ebe9dc);
+        position: relative;
+        overflow: hidden;
+      }
+      .transcript-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        border-bottom: 4px solid var(--border-color);
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+      }
+      .transcript-legend {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+        color: #555;
+        font-size: 1.05rem;
+      }
+      .legend-dot { width: 9px; height: 9px; display: inline-block; border-radius: 50%; background: #999; margin-right: 5px; }
+      .legend-dot.current { background: var(--primary-color); }
+
+      .caption-player { display: grid; gap: 12px; height: calc(100% - 54px); min-height: 580px; }
+      .caption-toolbar { display: flex; gap: 12px; align-items: center; }
+      .caption-search {
+        width: 100%;
+        min-height: 50px;
+        border: 4px solid #777;
+        background: #fff;
+        color: #111;
+        padding: 8px 14px;
+        font-family: var(--ui-font);
+        font-size: 1.35rem;
+        outline: none;
+        box-shadow: inset 2px 2px 4px rgba(0,0,0,.13);
+      }
+      .caption-search:focus { border-color: var(--primary-color); box-shadow: inset 0 0 0 2px var(--primary-color); }
+
+      .caption-list {
+        position: relative;
+        max-height: none;
+        min-height: 500px;
+        height: clamp(520px, 64vh, 720px);
+        overflow-y: auto;
+        border: 5px solid #1f1f1f;
+        background:
+          linear-gradient(90deg, transparent 0 48px, rgba(207,83,70,.45) 48px 50px, transparent 50px),
+          repeating-linear-gradient(to bottom, transparent 0 36px, rgba(72,113,164,.18) 37px 38px),
+          var(--paper-bg);
+        padding: 14px 16px 18px 60px;
+        box-shadow: inset 0 0 0 3px #f3ead3, var(--shadow-soft);
+      }
+      .caption-list::before {
+        content: '';
+        position: absolute;
+        top: 22px;
+        bottom: 22px;
+        left: 20px;
+        width: 16px;
+        background: radial-gradient(circle, rgba(0,0,0,.22) 0 7px, transparent 8px) 0 0 / 16px 64px repeat-y;
+        pointer-events: none;
+      }
+      .caption-list::after {
+        content: '';
+        position: sticky;
+        display: block;
+        float: right;
+        right: 0;
+        bottom: 0;
+        width: 44px;
+        height: 44px;
+        margin: -44px -16px -18px auto;
+        background: linear-gradient(135deg, rgba(0,0,0,.16), transparent 45%), linear-gradient(135deg, #e7deca 0 49%, #fffaf0 50%);
+        border-left: 2px solid rgba(0,0,0,.12);
+        border-top: 2px solid rgba(0,0,0,.12);
+        pointer-events: none;
+      }
+
+      .caption-empty {
+        color: var(--muted-text);
+        font-size: 1.35rem;
+        padding: 16px;
+      }
+      .caption-line {
+        display: grid;
+        grid-template-columns: 190px minmax(0, 1fr);
+        column-gap: 18px;
+        align-items: start;
+        border: 3px solid transparent;
+        color: #111;
+        cursor: pointer;
+        font-size: 1.3rem;
+        line-height: 1.38;
+        padding: 6px 8px;
+        user-select: text;
+        background: rgba(255,255,255,.42);
+      }
+      .caption-line + .caption-line { margin-top: 2px; }
+      .caption-line:hover,
+      .caption-line:focus-visible {
+        border-color: #777;
+        background: rgba(255,255,255,.82);
+        outline: none;
+      }
+      .caption-line.active {
+        position: relative;
+        background: #d8e8ff;
+        border-color: #9fc2f0;
+        box-shadow: inset 5px 0 0 var(--primary-color);
+        color: #0d47a1;
+        font-weight: 700;
+      }
+      .caption-line.active::before {
+        content: '▶';
+        position: absolute;
+        left: -34px;
+        top: 6px;
+        color: var(--primary-color);
+        text-shadow: 1px 1px 0 #fff;
+      }
+      .caption-line.match:not(.active) {
+        background: #dcffd9;
+        border-color: var(--success-color);
+      }
+      .caption-time {
+        color: #0b57d0;
+        display: block;
+        font-family: var(--pixel-font);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: .02em;
+        user-select: none;
+      }
+      .caption-text {
+        color: inherit;
+        min-width: 0;
+        line-height: 1.4;
+        overflow-wrap: break-word;
+        word-break: normal;
+        user-select: text;
+      }
+
+      .drawers {
+        display: grid;
+        gap: 14px;
+        margin-top: 18px;
+      }
+      .work-drawer {
+        padding: 0;
+        overflow: hidden;
+      }
+      .work-drawer > summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 1.55rem;
+        font-weight: 700;
+        background: linear-gradient(#f2f2ef, #dadad4);
+      }
+      .work-drawer > summary::-webkit-details-marker { display: none; }
+      .drawer-title { display: flex; align-items: center; gap: 12px; }
+      .drawer-meta { color: #555; font-size: 1.12rem; font-weight: 400; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .drawer-caret { font-size: 1.7rem; line-height: 1; }
+      .work-drawer[open] .drawer-caret { transform: rotate(180deg); }
+      .drawer-content { padding: 14px; border-top: 4px solid #000; background: var(--panel-bg); }
+
+      .status-box {
+        background: var(--panel-soft);
+        border: 4px solid var(--border-color);
+        padding: 10px 12px;
+        margin: 12px 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 8px 14px;
+        align-items: center;
+      }
+      .status-box span:first-child { color: var(--muted-text); }
+      .status-box strong { font-size: 1.35rem; color: #111; }
+      .input-block {
+        border: 4px solid var(--border-color);
+        background: var(--panel-soft);
+        padding: 12px;
+        margin-top: 12px;
+      }
+      .model-downloads {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        align-items: stretch;
+        margin-top: 8px;
+      }
+      .model-downloads .model-link {
+        width: 100%;
+        min-height: 72px;
+        flex-direction: column;
+        gap: 2px;
+        line-height: 1;
+      }
+      .model-name { font-size: 1.55rem; }
+      .model-size { font-size: 1.05rem; opacity: .82; }
+      .model-downloads .model-link.recommended { background: linear-gradient(#58a4f3, #246dc5); color: #fff; }
+      .model-downloads .model-link:focus-visible { outline: 4px solid var(--warning-color); outline-offset: 4px; }
+
+      #output {
+        width: 100%;
+        min-height: 180px;
+        margin-top: 12px;
+        border: 6px solid var(--border-color);
+        box-shadow: inset 0 0 0 3px #1f1f1f;
+        padding: 14px;
+        display: block;
+        background: var(--scanner-bg);
+        color: var(--scanner-text);
+        font-size: 1.2rem;
+        font-family: var(--pixel-font);
+        white-space: pre;
+        overflow-wrap: normal;
+        overflow-x: auto;
+        outline: none;
+        resize: vertical;
+        max-height: 260px;
+      }
+
+      @media (max-width: 1020px) {
+        body { padding: 12px; }
+        .topbar { flex-direction: column; align-items: flex-start; }
+        .status-chips { justify-content: flex-start; }
+        .system-strip { grid-template-columns: 1fr 1fr; }
+        .model-bay-trigger { width: 100%; }
+        .workstation { grid-template-columns: 1fr; }
+        .caption-player { min-height: 0; }
+        .caption-list { height: clamp(420px, 58vh, 620px); }
+      }
+
+      @media (max-width: 620px) {
+        body { padding: 10px; }
+        .rpg-box { border-width: 5px; box-shadow: 4px 4px 0 rgba(0,0,0,.55); }
+        .topbar { padding: 14px; }
+        h1 { font-size: 2.7rem; }
+        .subtitle { font-size: 1.2rem; }
+        .system-strip { grid-template-columns: 1fr; }
+        .system-chip { border-right: none; border-bottom: 2px solid rgba(255,255,255,.18); }
+        .system-chip:last-of-type { border-bottom: none; }
+        .file-strip { grid-template-columns: 1fr; }
+        .cassette-window { margin-inline: 0; min-height: 122px; }
+        .reel.left { left: 34px; }
+        .reel.right { right: 34px; }
+        .meter { width: min(96px, 36%); }
+        .meter-label { font-size: .72rem; letter-spacing: 1.4px; }
+        .deck-display { grid-template-columns: 1fr; text-align: center; }
+        .clock-duration { text-align: center; }
+        .transport-row { grid-template-columns: repeat(2, 1fr); }
+        .big-action { font-size: 1.8rem; }
+        .ai-links { grid-template-columns: 1fr; }
+        .transcript-title-row { align-items: flex-start; flex-direction: column; }
+        .transcript-legend { justify-content: flex-start; }
+        .caption-list {
+          min-height: 340px;
+          height: 54vh;
+          padding: 12px 10px 16px 38px;
+          background:
+            linear-gradient(90deg, transparent 0 30px, rgba(207,83,70,.45) 30px 32px, transparent 32px),
+            repeating-linear-gradient(to bottom, transparent 0 36px, rgba(72,113,164,.18) 37px 38px),
+            var(--paper-bg);
+        }
+        .caption-list::before { left: 10px; }
+        .caption-line { grid-template-columns: 1fr; row-gap: 2px; font-size: 1.16rem; }
+        .caption-time { white-space: normal; }
+        .caption-line.active::before { left: -24px; }
+        .model-downloads { grid-template-columns: 1fr; }
+        .status-box { grid-template-columns: 1fr; }
+        .drawer-meta { display: none; }
+        .btn, .rpg-btn, .file-btn { width: 100%; }
+      }
+
+    </style>
+    <link rel="icon" href="data:,">
+  </head>
+  <body>
+    <div id="main-container">
+      <header class="topbar rpg-box">
+        <div class="brand">
+          <img class="logo" src="/assets/whisper-demo/mr-mou.png" alt="Mr.Mou" onerror="this.style.display='none'">
+          <div>
+            <div class="eyebrow">Mr.Mou English Lab</div>
+            <h1>SpeakDeck</h1>
+            <div class="subtitle">本地转写 · 听读回放 · AI 口语润色</div>
+          </div>
+        </div>
+        <div class="status-chips" aria-label="app status badges">
+          <span class="chip green">Local STT</span>
+          <span class="chip yellow">Playback</span>
+          <span class="chip">AI Prompt</span>
+        </div>
+      </header>
+
+      <section class="system-strip" aria-label="current app status">
+        <div class="system-chip" id="model-status-chip" data-state="idle">
+          <span class="status-light" aria-hidden="true"></span>
+          <span>
+            <strong>Model Status</strong>
+            <span class="system-sub" id="model-whisper-status">未加载模型</span>
+          </span>
+        </div>
+        <div class="system-chip" id="audio-status-chip" data-state="idle">
+          <span class="status-light" aria-hidden="true"></span>
+          <span>
+            <strong>Audio Status</strong>
+            <span class="system-sub" id="audio-status">未选择音频文件</span>
+          </span>
+        </div>
+        <div class="system-chip" id="transcription-status-chip" data-state="idle">
+          <span class="status-light" aria-hidden="true"></span>
+          <span>
+            <strong>Transcription Status</strong>
+            <span class="system-sub" id="transcription-status-label">Idle · Ready to transcribe</span>
+          </span>
+        </div>
+        <button class="btn model-bay-trigger" type="button" onclick="openModelBay()">Open Model Bay ▾</button>
+      </section>
+
+      <main class="workstation">
+        <section class="deck-panel rpg-box" aria-label="student audio controls">
+          <div class="section-title">
+            <span class="step-badge">1</span>
+            <h2>Student Audio</h2>
+          </div>
+
+          <div id="input_file" class="file-strip">
+            <input class="native-file" type="file" id="fileInput" accept=".wav,.mp3,.m4a,.aac,.ogg,.webm,audio/wav,audio/x-wav,audio/wave,audio/mpeg,audio/mp3,audio/mpeg3,audio/x-mp3,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/webm,audio/*" onchange="loadAudio(event)" />
+            <span id="student-audio-size">≤ 30 min</span>
+          </div>
+
+          <div id="audio-preview-wrap" class="audio-preview-block deck-machine">
+            <span class="screw bottom-left" aria-hidden="true"></span>
+            <span class="screw bottom-right" aria-hidden="true"></span>
+            <div class="deck-label"><span>AUDIO PLAYER</span><span>STEREO</span></div>
+            <div class="cassette-window" aria-hidden="true">
+              <span class="reel left"></span>
+              <span class="reel right"></span>
+              <span class="meter-label">INPUT LEVEL</span>
+              <span class="meter"></span>
+            </div>
+            <audio id="audio-preview" preload="metadata"></audio>
+            <div class="deck-display">
+              <span class="clock-current" id="deck-current-time">00:00</span>
+              <input class="deck-seek" id="deck-seek" type="range" min="0" max="100" value="0" step="0.1" aria-label="Audio seek bar">
+              <span class="clock-duration" id="deck-duration">--:--</span>
+            </div>
+            <div class="transport-row" aria-label="audio playback controls">
+              <button class="btn transport-btn" type="button" onclick="moveDeckPlayback(-5)" aria-label="Back 5 seconds">◀◀</button>
+              <button class="btn transport-btn main-play" id="deck-play-button" type="button" onclick="toggleAudioPlayback()" aria-label="Play or pause">▶</button>
+              <button class="btn transport-btn" type="button" onclick="moveDeckPlayback(5)" aria-label="Forward 5 seconds">▶▶</button>
+              <button class="btn transport-btn icon-btn" id="deck-mute-button" type="button" onclick="toggleAudioMute()" aria-label="Mute audio" title="Mute / unmute">
+                <span class="speaker-icon" aria-hidden="true">
+                  <span class="sound-wave wave-1"></span>
+                  <span class="sound-wave wave-2"></span>
+                  <span class="speaker-slash"></span>
+                </span>
+              </button>
+            </div>
+            <div class="audio-hint">Selected: <span id="student-audio-name">No audio yet</span></div>
+            <div class="audio-hint">快捷键：空格播放 / 暂停，← 跳到上一句，→ 跳到下一句。</div>
+          </div>
+
+          <button class="btn btn-primary big-action" id="transcribe-button" data-needs-fs disabled onclick="onProcess(false);">
+            <span class="action-number">3</span>Start transcribing
+          </button>
+
+          <button class="btn btn-success big-action copy-action" type="button" onclick="copyWithAIPrompt()">
+            <span class="action-number">4</span>Copy polish prompt
+          </button>
+
+          <div class="ai-shortcuts" aria-label="AI chatbot shortcuts">
+            <h3>AI Shortcuts</h3>
+            <div class="ai-links">
+              <a class="btn btn-secondary ai-link" href="https://www.doubao.com/" target="_blank" rel="noopener"><span class="ai-icon doubao" aria-hidden="true"></span><span>Doubao</span></a>
+              <a class="btn btn-secondary ai-link" href="https://chat.deepseek.com/" target="_blank" rel="noopener"><span class="ai-icon deepseek" aria-hidden="true"></span><span>DeepSeek</span></a>
+              <a class="btn btn-secondary ai-link" href="https://www.kimi.com/" target="_blank" rel="noopener"><span class="ai-icon kimi" aria-hidden="true"></span><span>Kimi</span></a>
+              <a class="btn btn-secondary ai-link" href="https://yuanbao.tencent.com/chat/" target="_blank" rel="noopener"><span class="ai-icon yuanbao" aria-hidden="true"></span><span>Yuanbao</span></a>
+              <a class="btn btn-secondary ai-link" href="https://chat.qwen.ai/" target="_blank" rel="noopener"><span class="ai-icon qwen" aria-hidden="true"></span><span>Qwen</span></a>
+              <a class="btn btn-secondary ai-link" href="https://yiyan.baidu.com/" target="_blank" rel="noopener"><span class="ai-icon wenxin" aria-hidden="true"></span><span>Wenxin</span></a>
+              <a class="btn btn-secondary ai-link" href="https://chatglm.cn/" target="_blank" rel="noopener"><span class="ai-icon qingyan" aria-hidden="true"></span><span>Qingyan</span></a>
+              <a class="btn btn-secondary ai-link" href="https://chatgpt.com/" target="_blank" rel="noopener"><span class="ai-icon chatgpt" aria-hidden="true"></span><span>ChatGPT</span></a>
+            </div>
+          </div>
+        </section>
+
+        <section class="transcript-panel rpg-box" aria-label="transcript playback workspace">
+          <div class="transcript-title-row">
+            <div class="section-title" style="border-bottom:0;padding-bottom:0;margin-bottom:0;">
+              <span class="step-badge">2</span>
+              <h2>Transcript Playback</h2>
+            </div>
+            <div class="transcript-legend">
+              <span><i class="legend-dot current"></i>Current</span>
+              <span><i class="legend-dot"></i>Click to jump</span>
+              <span>▮ Bookmark later</span>
+            </div>
+          </div>
+
+          <div class="caption-player">
+            <div class="caption-toolbar">
+              <input id="caption-search" class="caption-search" type="search" placeholder="Search transcript..." aria-label="Search transcript">
+            </div>
+            <div id="caption-list" class="caption-list" aria-live="polite">
+              <div class="caption-empty">Choose an audio file, start transcribing, then review the transcript here.</div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <section class="drawers" aria-label="secondary setup and debug drawers">
+        <details class="work-drawer rpg-box" id="model">
+          <summary>
+            <span class="drawer-title"><span class="step-badge">5</span>Model Bay / Setup</span>
+            <span class="drawer-meta" id="model-whisper-status-drawer">未加载模型</span>
+            <span class="drawer-caret">⌄</span>
+          </summary>
+          <div class="drawer-content">
+            <p class="help-text">首次使用先下载一个模型文件，然后在下方选择这个 <code>.bin</code> 文件。模型会缓存在本机浏览器中，下次打开网页会自动恢复。</p>
+
+            <div class="input-block">
+              <label>Step 1 · Download model file:</label>
+              <div class="model-downloads">
+                <a class="btn model-link recommended" href="https://www.modelscope.cn/models/cjc1887415157/whisper.cpp/resolve/master/ggml-tiny.en.bin" target="_blank" rel="noopener">
+                  <span class="model-name">tiny.en</span>
+                  <span class="model-size">≈75 MB</span>
+                </a>
+                <a class="btn model-link" href="https://www.modelscope.cn/models/cjc1887415157/whisper.cpp/resolve/master/ggml-base.en.bin" target="_blank" rel="noopener">
+                  <span class="model-name">base.en</span>
+                  <span class="model-size">≈142 MB</span>
+                </a>
+                <a class="btn model-link" href="https://www.modelscope.cn/models/cjc1887415157/whisper.cpp/resolve/master/ggml-small.en.bin" target="_blank" rel="noopener">
+                  <span class="model-name">small.en</span>
+                  <span class="model-size">≈466 MB</span>
+                </a>
+              </div>
+              <div class="audio-hint">优先下载 tiny.en：速度最快，文件最小。下载会在新标签页打开。</div>
+            </div>
+
+            <div class="input-block">
+              <label>Step 2 · Import downloaded model:</label>
+              <input class="native-file" type="file" id="whisper-file" accept=".bin" onchange="loadFile(event, 'whisper.bin')" />
+              <div class="audio-hint">选择刚刚下载的 <code>ggml-tiny.en.bin</code> / <code>ggml-base.en.bin</code> / <code>ggml-small.en.bin</code>。</div>
+            </div>
+          </div>
+        </details>
+
+        <details class="work-drawer rpg-box debug-terminal">
+          <summary>
+            <span class="drawer-title"><span class="step-badge">6</span>Debug terminal / raw output</span>
+            <span class="drawer-meta">Whisper logs and raw timestamp output</span>
+            <span class="drawer-caret">⌄</span>
+          </summary>
+          <div class="drawer-content">
+            <textarea id="output" rows="8" spellcheck="false"></textarea>
+          </div>
+        </details>
+      </section>
+    </div>
+
+    <script src="helpers.js?v=20250814"></script>
+    <script>
+      /* ======== helpers.js 依赖的三个全局量（必须存在）======== */
+      let dbVersion = 1;
+      let dbName    = 'whisper.ggerganov.com';
+      let indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+
+      /* ======================= 可配置区域 ======================= */
+      const kMaxAudio_s = 30 * 60; // 文件 30 分钟
+      
+      /* ===== 运行时与 FS 就绪门禁 ===== */
+      let FS_READY   = false;
+      let MODEL_READY= false;
+      let PENDING_MODEL = null;
+      let TRANSCRIBING = false;
+      let modelImportGeneration = 0;
+
+      const MODEL_CACHE_STORE = 'models';
+      const MANUAL_MODEL_CACHE_KEY = 'manual:whisper.bin';
+      const MANUAL_MODEL_METADATA_KEY = 'manual:whisper.metadata';
+
+      function enableFsButtons() {
+        document.querySelectorAll('[data-needs-fs]').forEach(b => b.disabled = false);
+      }
+
+      function getTranscribeButton() {
+        return document.getElementById('transcribe-button');
+      }
+
+      function setTranscribeButtonState(state) {
+        const button = getTranscribeButton();
+
+        const states = {
+          ready: { text: 'Start transcribing', className: 'btn-primary', disabled: !FS_READY, statusText: 'Idle · Ready to transcribe', tone: 'idle' },
+          processing: { text: 'Transcribing... please wait', className: 'btn-warning', disabled: true, statusText: 'Working · Please wait', tone: 'working' },
+          done: { text: 'All done', className: 'btn-success', disabled: false, statusText: 'All done · Ready to review', tone: 'done' },
+          error: { text: 'Transcription failed', className: 'btn-danger', disabled: false, statusText: 'Failed · Try again', tone: 'error' }
+        };
+        const config = states[state] || states.ready;
+
+        if (button) {
+          button.textContent = config.text;
+          button.disabled = config.disabled;
+          button.classList.remove('btn-primary', 'btn-warning', 'btn-success', 'btn-danger');
+          button.classList.add(config.className);
+        }
+
+        const statusLabel = document.getElementById('transcription-status-label');
+        if (statusLabel) statusLabel.textContent = config.statusText;
+
+        const statusChip = document.getElementById('transcription-status-chip');
+        if (statusChip) {
+          statusChip.dataset.state = config.tone;
+        }
+      }
+
+      // 控制台输出函数在 helpers.js 里
+      function setAudio(data, message) {
+        const text = message || (data ? '音频已就绪：可以开始转写' : '未选择音频文件');
+        const el = document.getElementById('audio-status');
+        if (el) el.textContent = text;
+
+        const chip = document.getElementById('audio-status-chip');
+        if (chip) chip.dataset.state = data ? 'ready' : 'idle';
+      }
+
+      // Emscripten runtime 钩子（main.js 加载后会触发）
+      var Module = {
+        print: printTextarea,
+        printErr: printTextarea,
+        setStatus: (text) => printTextarea('js: ' + text),
+        monitorRunDependencies: function() {},
+        onRuntimeInitialized() {
+          FS_READY = true;
+          enableFsButtons();
+          if (PENDING_MODEL) {
+            tryStoreFS('whisper.bin', PENDING_MODEL);
+            PENDING_MODEL = null;
+          } else {
+            restoreCachedModelIfAvailable();
+          }
+        },
+        onAbort: (what) => { printTextarea('ABORT: ' + what); },
+      };
+
+      // 全局状态
+      var context  = null;   // WebAudio
+      var audio    = null;   // Float32Array（单声道）
+      var instance = null;   // whisper 实例
+      var model_whisper = '';          // 状态显示
+      var currentModelKey = 'tiny.en'; // 记录最近一次选择的模型键
+
+      // 你这版构建为单线程：先固定 1，避免线上 abort；将来换线程版再提升
+      var nthreads = 1;
+
+      function formatModelCacheError(err) {
+        return err && err.message ? err.message : String(err || 'unknown error');
+      }
+
+      function setModelStatus(text) {
+        const el = document.getElementById('model-whisper-status');
+        if (el) el.textContent = text;
+
+        const copy = document.getElementById('model-whisper-status-drawer');
+        if (copy) copy.textContent = text;
+
+        const chip = document.getElementById('model-status-chip');
+        if (chip) {
+          const isReady = /已就绪|缓存恢复|ready/i.test(String(text || ''));
+          chip.dataset.state = isReady ? 'ready' : 'idle';
+        }
+      }
+
+      function openModelCacheDb() {
+        return new Promise(function(resolve, reject) {
+          if (!indexedDB) {
+            reject(new Error('IndexedDB unavailable'));
+            return;
+          }
+
+          let request = null;
+          try {
+            request = indexedDB.open(dbName, dbVersion);
+          } catch (err) {
+            reject(err);
+            return;
+          }
+
+          request.onupgradeneeded = function(event) {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(MODEL_CACHE_STORE)) {
+              db.createObjectStore(MODEL_CACHE_STORE, { autoIncrement: false });
+            }
+          };
+
+          request.onsuccess = function(event) {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(MODEL_CACHE_STORE)) {
+              db.close();
+              reject(new Error('IndexedDB object store "' + MODEL_CACHE_STORE + '" is missing'));
+              return;
+            }
+            resolve(db);
+          };
+
+          request.onerror = function() {
+            reject(request.error || new Error('failed to open IndexedDB'));
+          };
+          request.onblocked = function() {
+            reject(new Error('IndexedDB open blocked'));
+          };
+          request.onabort = function() {
+            reject(request.error || new Error('IndexedDB open aborted'));
+          };
+        });
+      }
+
+      function normalizeModelCacheBytes(data) {
+        if (data instanceof Uint8Array) return data;
+        if (data instanceof ArrayBuffer) return new Uint8Array(data);
+        if (ArrayBuffer.isView(data)) {
+          return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        }
+        return null;
+      }
+
+      async function saveManualModelToCache(fileName, fileSize, uint8Array) {
+        if (!uint8Array || !uint8Array.byteLength) {
+          throw new Error('manual model is empty');
+        }
+
+        const db = await openModelCacheDb();
+        return new Promise(function(resolve, reject) {
+          let tx = null;
+          try {
+            tx = db.transaction([MODEL_CACHE_STORE], 'readwrite');
+            const store = tx.objectStore(MODEL_CACHE_STORE);
+            store.put(uint8Array, MANUAL_MODEL_CACHE_KEY);
+            store.put({
+              name: fileName,
+              size: fileSize,
+              savedAt: Date.now()
+            }, MANUAL_MODEL_METADATA_KEY);
+          } catch (err) {
+            db.close();
+            reject(err);
+            return;
+          }
+
+          tx.oncomplete = function() {
+            db.close();
+            resolve();
+          };
+          tx.onerror = function() {
+            const err = tx.error || new Error('cache write failed');
+            db.close();
+            reject(err);
+          };
+          tx.onabort = function() {
+            const err = tx.error || new Error('cache write aborted');
+            db.close();
+            reject(err);
+          };
+        });
+      }
+
+      async function loadManualModelFromCache() {
+        const db = await openModelCacheDb();
+        return new Promise(function(resolve, reject) {
+          let tx = null;
+          let binaryRequest = null;
+          let metadataRequest = null;
+
+          try {
+            tx = db.transaction([MODEL_CACHE_STORE], 'readonly');
+            const store = tx.objectStore(MODEL_CACHE_STORE);
+            binaryRequest = store.get(MANUAL_MODEL_CACHE_KEY);
+            metadataRequest = store.get(MANUAL_MODEL_METADATA_KEY);
+          } catch (err) {
+            db.close();
+            reject(err);
+            return;
+          }
+
+          tx.oncomplete = function() {
+            db.close();
+            const bytes = normalizeModelCacheBytes(binaryRequest.result);
+            if (!bytes) {
+              resolve(null);
+              return;
+            }
+            if (!bytes.byteLength) {
+              reject(new Error('cached model is empty'));
+              return;
+            }
+
+            const metadata = metadataRequest.result || {};
+            resolve({
+              data: bytes,
+              metadata: {
+                name: metadata.name || 'whisper.bin',
+                size: metadata.size || bytes.byteLength,
+                savedAt: metadata.savedAt || 0
+              }
+            });
+          };
+          tx.onerror = function() {
+            const err = tx.error || new Error('cache read failed');
+            db.close();
+            reject(err);
+          };
+          tx.onabort = function() {
+            const err = tx.error || new Error('cache read aborted');
+            db.close();
+            reject(err);
+          };
+        });
+      }
+
+      async function restoreCachedModelIfAvailable() {
+        if (!FS_READY || !Module.FS_createDataFile) {
+          printTextarea('model-cache: skipped restore because FS is not ready');
+          return;
+        }
+
+        const restoreGeneration = modelImportGeneration;
+        try {
+          const cached = await loadManualModelFromCache();
+          if (!cached) return;
+          if (MODEL_READY || PENDING_MODEL || restoreGeneration !== modelImportGeneration) return;
+
+          model_whisper = cached.metadata.name || 'whisper.bin';
+          currentModelKey = 'local';
+          tryStoreFS('whisper.bin', cached.data);
+          setModelStatus('模型已从缓存恢复：' + model_whisper);
+          printTextarea('model-cache: restored cached model: ' + model_whisper);
+        } catch (err) {
+          printTextarea('model-cache: failed to restore model cache: ' + formatModelCacheError(err));
+        }
+      }
+
+      // —— 把二进制写入 WASM FS（若 FS 未就绪先缓存）
+      function tryStoreFS(fname, buf) {
+        try { Module.FS_unlink(fname); } catch (_) {}
+        Module.FS_createDataFile("/", fname, buf, true, true);
+        MODEL_READY = true;
+        instance = null; // If a different model is imported later, reinitialize on next transcription.
+        setModelStatus('模型已就绪：' + (model_whisper || ''));
+        TRANSCRIBING = false;
+        setTranscribeButtonState('ready');
+        printTextarea('storeFS: stored model: ' + fname + ' size: ' + buf.length);
+      }
+      function storeFS(fname, buf) {
+        if (!FS_READY || !Module.FS_createDataFile) {
+          PENDING_MODEL = buf;
+          printTextarea('FS 尚未就绪，已缓存模型数据，运行时就绪后会自动写入 …');
+          return;
+        }
+        tryStoreFS(fname, buf);
+      }
+
+      // —— 本地选择模型
+      function loadFile(event, fname) {
+        const file = event.target.files[0];
+        if (!file) return;
+        modelImportGeneration += 1;
+        model_whisper   = file.name;
+        currentModelKey = 'local';
+        TRANSCRIBING = false;
+        setTranscribeButtonState('ready');
+
+        printTextarea('正在加载本地模型：' + file.name + '（' + file.size + ' 字节）');
+        printTextarea('请稍候 …');
+
+        const reader = new FileReader();
+        reader.onload = function() {
+          const buf = new Uint8Array(reader.result);
+          storeFS(fname, buf);
+          saveManualModelToCache(file.name, file.size, buf).then(function() {
+            printTextarea('model-cache: saved manual model to browser cache: ' + file.name);
+          }).catch(function(err) {
+            printTextarea('model-cache: failed to save model cache: ' + formatModelCacheError(err));
+          });
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      // ===== 音频：文件加载 =====
+      const kSampleRate = 16000;
+      window.AudioContext = window.AudioContext || window.webkitAudioContext;
+      window.OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+
+      function ensureContext() {
+        if (!context) {
+          context = new AudioContext({
+            sampleRate: kSampleRate,
+            channelCount: 1,
+            echoCancellation: false,
+            autoGainControl:  true,
+            noiseSuppression: true
+          });
+        }
+      }
+
+
+      let currentAudioPreviewUrl = null;
+      function updateAudioPreview(file) {
+        const wrap = document.getElementById('audio-preview-wrap');
+        const player = document.getElementById('audio-preview');
+        if (!wrap || !player || !file) return;
+
+        if (currentAudioPreviewUrl) {
+          URL.revokeObjectURL(currentAudioPreviewUrl);
+        }
+        currentAudioPreviewUrl = URL.createObjectURL(file);
+        player.src = currentAudioPreviewUrl;
+        player.load();
+        wrap.classList.remove('hidden');
+
+        const nameEl = document.getElementById('student-audio-name');
+        if (nameEl) nameEl.textContent = file.name;
+
+        const sizeEl = document.getElementById('student-audio-size');
+        if (sizeEl) sizeEl.textContent = formatFileSize(file.size);
+
+        updateDeckTimeDisplay();
+      }
+
+      function formatFileSize(bytes) {
+        if (!Number.isFinite(bytes)) return '';
+        if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+        if (bytes >= 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return bytes + ' B';
+      }
+
+      function formatDeckClock(seconds) {
+        if (!Number.isFinite(seconds) || seconds < 0) seconds = 0;
+        const total = Math.floor(seconds);
+        const mm = String(Math.floor(total / 60)).padStart(2, '0');
+        const ss = String(total % 60).padStart(2, '0');
+        return mm + ':' + ss;
+      }
+
+      function updateDeckTimeDisplay() {
+        const player = getAudioPlayer();
+        const currentEl = document.getElementById('deck-current-time');
+        const durationEl = document.getElementById('deck-duration');
+        const seek = document.getElementById('deck-seek');
+        const playButton = document.getElementById('deck-play-button');
+
+        if (!player) return;
+
+        if (currentEl) currentEl.textContent = formatDeckClock(player.currentTime || 0);
+        if (durationEl) durationEl.textContent = Number.isFinite(player.duration) ? formatDeckClock(player.duration) : '--:--';
+
+        const progress = Number.isFinite(player.duration) && player.duration > 0 ? (player.currentTime / player.duration) * 100 : 0;
+        if (seek && document.activeElement !== seek) seek.value = String(progress);
+        if (seek) seek.style.setProperty('--progress', progress + '%');
+
+        const deckMachine = document.getElementById('audio-preview-wrap');
+        const isPlaying = !!(player.src && !player.paused && !player.ended);
+        if (deckMachine) deckMachine.classList.toggle('is-playing', isPlaying);
+        if (playButton) {
+          playButton.textContent = isPlaying ? 'Ⅱ' : '▶';
+          playButton.classList.toggle('is-playing', isPlaying);
+        }
+      }
+
+      function moveDeckPlayback(seconds) {
+        const player = getAudioPlayer();
+        if (!player || !player.src) return;
+        const duration = Number.isFinite(player.duration) ? player.duration : Infinity;
+        player.currentTime = Math.max(0, Math.min(duration, (player.currentTime || 0) + seconds));
+        updateDeckTimeDisplay();
+        updateActiveCaption(true);
+      }
+
+      function updateMuteButtonState() {
+        const player = getAudioPlayer();
+        const muteButton = document.getElementById('deck-mute-button');
+        if (!player || !muteButton) return;
+        const muted = !!player.muted;
+        muteButton.classList.toggle('is-muted', muted);
+        muteButton.setAttribute('aria-label', muted ? 'Unmute audio' : 'Mute audio');
+        muteButton.setAttribute('title', muted ? 'Unmute' : 'Mute');
+      }
+
+      function toggleAudioMute() {
+        const player = getAudioPlayer();
+        if (!player) return;
+        player.muted = !player.muted;
+        updateMuteButtonState();
+      }
+
+      function openModelBay() {
+        const drawer = document.getElementById('model');
+        if (!drawer) return;
+        drawer.open = true;
+        drawer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      const syncedTranscriptSegments = [];
+      const syncedTranscriptKeys = new Set();
+      let activeCaptionIndex = -1;
+
+      function timestampToSeconds(hours, minutes, seconds) {
+        return Number(hours) * 3600 + Number(minutes) * 60 + Number(String(seconds).replace(',', '.'));
+      }
+
+      function parseWhisperTimestampLine(line) {
+        const match = String(line || '').match(/^\s*\[(\d{2}):(\d{2}):(\d{2}(?:[\.,]\d{1,3})?)\s*-->\s*(\d{2}):(\d{2}):(\d{2}(?:[\.,]\d{1,3})?)\]\s*(.*?)\s*$/);
+        if (!match) return null;
+
+        const text = match[7].trim();
+        if (!text) return null;
+
+        const start = timestampToSeconds(match[1], match[2], match[3]);
+        const end = timestampToSeconds(match[4], match[5], match[6]);
+        if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+
+        return { start, end, text };
+      }
+
+      function formatCaptionTime(seconds) {
+        const total = Math.max(0, Math.floor(seconds || 0));
+        const hh = String(Math.floor(total / 3600)).padStart(2, '0');
+        const mm = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
+        const ss = String(total % 60).padStart(2, '0');
+        return hh + ':' + mm + ':' + ss;
+      }
+
+      function getAudioPlayer() {
+        return document.getElementById('audio-preview');
+      }
+
+      function hasSelectionInside(element) {
+        const selection = window.getSelection && window.getSelection();
+        return !!(selection && !selection.isCollapsed && element.contains(selection.anchorNode) && element.contains(selection.focusNode));
+      }
+
+      function safePlayAudio(player) {
+        try {
+          const playPromise = player.play();
+          if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(function(err) {
+              console.warn('Audio play failed:', err);
+            });
+          }
+        } catch (err) {
+          console.warn('Audio play failed:', err);
+        }
+      }
+
+      function scrollCaptionLineIntoView(line, list) {
+        const lineRect = line.getBoundingClientRect();
+        const listRect = list.getBoundingClientRect();
+
+        if (lineRect.top < listRect.top) {
+          list.scrollTop -= (listRect.top - lineRect.top) + 8;
+        } else if (lineRect.bottom > listRect.bottom) {
+          list.scrollTop += (lineRect.bottom - listRect.bottom) + 8;
+        }
+      }
+
+      function syncActiveCaption(index, shouldScroll) {
+        const list = document.getElementById('caption-list');
+        if (!list) return;
+
+        list.querySelectorAll('.caption-line.active').forEach(function(line) {
+          line.classList.remove('active');
+        });
+
+        activeCaptionIndex = index;
+        if (index < 0) return;
+
+        const activeLine = list.querySelector('.caption-line[data-segment-index="' + index + '"]');
+        if (activeLine) {
+          activeLine.classList.add('active');
+          if (shouldScroll) scrollCaptionLineIntoView(activeLine, list);
+        }
+      }
+
+      function updateActiveCaption(shouldScroll) {
+        const player = getAudioPlayer();
+        if (!player || syncedTranscriptSegments.length === 0) {
+          syncActiveCaption(-1, false);
+          return;
+        }
+
+        const currentTime = player.currentTime || 0;
+        let index = -1;
+        for (let i = 0; i < syncedTranscriptSegments.length; i++) {
+          const segment = syncedTranscriptSegments[i];
+          if (segment.start <= currentTime && currentTime < segment.end) {
+            index = i;
+            break;
+          }
+        }
+        syncActiveCaption(index, shouldScroll);
+      }
+
+      function seekToCaptionSegment(index) {
+        const player = getAudioPlayer();
+        const segment = syncedTranscriptSegments[index];
+        if (!player || !segment) return;
+
+        try {
+          player.currentTime = segment.start;
+        } catch (err) {
+          console.warn('Audio seek failed:', err);
+        }
+        updateActiveCaption(true);
+        safePlayAudio(player);
+      }
+
+      function renderSyncedTranscript() {
+        const list = document.getElementById('caption-list');
+        if (!list) return;
+
+        const search = document.getElementById('caption-search');
+        const query = search ? search.value.trim().toLowerCase() : '';
+        const fragment = document.createDocumentFragment();
+
+        if (syncedTranscriptSegments.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'caption-empty';
+          empty.textContent = 'No transcript yet.';
+          fragment.appendChild(empty);
+        } else {
+          syncedTranscriptSegments.forEach(function(segment, index) {
+            const line = document.createElement('div');
+            line.className = 'caption-line';
+            line.dataset.segmentIndex = String(index);
+            line.tabIndex = 0;
+            line.setAttribute('role', 'button');
+            line.setAttribute('aria-label', 'Seek to ' + formatCaptionTime(segment.start));
+
+            if (index === activeCaptionIndex) line.classList.add('active');
+            if (query && segment.text.toLowerCase().indexOf(query) !== -1) line.classList.add('match');
+
+            const time = document.createElement('span');
+            time.className = 'caption-time';
+            time.textContent = formatCaptionTime(segment.start) + ' - ' + formatCaptionTime(segment.end);
+
+            const text = document.createElement('span');
+            text.className = 'caption-text';
+            text.textContent = segment.text;
+
+            let pointerStart = null;
+            line.addEventListener('pointerdown', function(event) {
+              pointerStart = { x: event.clientX, y: event.clientY };
+            });
+            line.addEventListener('click', function(event) {
+              const moved = pointerStart && Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 4;
+              if (moved || hasSelectionInside(line)) return;
+              seekToCaptionSegment(index);
+            });
+            line.addEventListener('keydown', function(event) {
+              const isSpaceKey = event.key === ' ' || event.code === 'Space';
+
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                seekToCaptionSegment(index);
+                return;
+              }
+
+              if (isSpaceKey) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (!event.repeat) toggleAudioPlayback();
+              }
+            });
+
+            line.appendChild(time);
+            line.appendChild(text);
+            fragment.appendChild(line);
+          });
+        }
+
+        list.textContent = '';
+        list.appendChild(fragment);
+      }
+
+      function clearSyncedTranscript() {
+        syncedTranscriptSegments.length = 0;
+        syncedTranscriptKeys.clear();
+        activeCaptionIndex = -1;
+
+        const search = document.getElementById('caption-search');
+        if (search) search.value = '';
+
+        renderSyncedTranscript();
+      }
+
+      function handleTranscriptionStatusLine(line) {
+        const text = String(line || '');
+        if (!TRANSCRIBING) return;
+
+        if (/whisper_print_timings:\s+total time\s*=/i.test(text)) {
+          TRANSCRIBING = false;
+          setTranscribeButtonState('done');
+        }
+      }
+
+      function handleWhisperOutputLine(line) {
+        handleTranscriptionStatusLine(line);
+
+        const segment = parseWhisperTimestampLine(line);
+        if (!segment) return;
+
+        const key = segment.start.toFixed(3) + '|' + segment.end.toFixed(3) + '|' + segment.text;
+        if (syncedTranscriptKeys.has(key)) return;
+
+        syncedTranscriptKeys.add(key);
+        syncedTranscriptSegments.push(segment);
+        syncedTranscriptSegments.sort(function(a, b) {
+          return a.start - b.start || a.end - b.end || a.text.localeCompare(b.text);
+        });
+        renderSyncedTranscript();
+        updateActiveCaption(false);
+      }
+      window.handleWhisperOutputLine = handleWhisperOutputLine;
+
+      function isEditableShortcutTarget(target) {
+        if (!target || target === document.body) return false;
+        const editable = target.closest('input, textarea, select, button, a, summary, [contenteditable="true"]');
+        return Boolean(editable);
+      }
+
+      function getNearestCaptionIndex() {
+        const player = getAudioPlayer();
+        if (syncedTranscriptSegments.length === 0) return -1;
+
+        if (activeCaptionIndex >= 0 && activeCaptionIndex < syncedTranscriptSegments.length) {
+          return activeCaptionIndex;
+        }
+
+        if (!player) return 0;
+        const currentTime = player.currentTime || 0;
+
+        for (let i = 0; i < syncedTranscriptSegments.length; i++) {
+          const segment = syncedTranscriptSegments[i];
+          if (segment.start <= currentTime && currentTime < segment.end) return i;
+          if (currentTime < segment.start) return Math.max(0, i - 1);
+        }
+
+        return syncedTranscriptSegments.length - 1;
+      }
+
+      function toggleAudioPlayback() {
+        const player = getAudioPlayer();
+        if (!player || !player.src) return;
+
+        if (player.paused || player.ended) {
+          safePlayAudio(player);
+        } else {
+          player.pause();
+        }
+        updateActiveCaption(true);
+      }
+
+      function moveCaptionByStep(step) {
+        if (syncedTranscriptSegments.length === 0) return;
+
+        const currentIndex = getNearestCaptionIndex();
+        const nextIndex = Math.min(
+          syncedTranscriptSegments.length - 1,
+          Math.max(0, currentIndex + step)
+        );
+        seekToCaptionSegment(nextIndex);
+      }
+
+      function handleGlobalPlaybackShortcuts(event) {
+        if (!event || event.defaultPrevented) return;
+        if (event.isComposing) return;
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        if (isEditableShortcutTarget(event.target)) return;
+
+        const isSpaceKey = event.key === ' ' || event.code === 'Space';
+
+        if (isSpaceKey) {
+          event.preventDefault();
+          if (!event.repeat) toggleAudioPlayback();
+          return;
+        }
+
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          moveCaptionByStep(-1);
+          return;
+        }
+
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          moveCaptionByStep(1);
+        }
+      }
+
+      function initCaptionPlayer() {
+        const search = document.getElementById('caption-search');
+        if (search) {
+          search.addEventListener('input', function() {
+            renderSyncedTranscript();
+            updateActiveCaption(false);
+          });
+        }
+
+        const player = getAudioPlayer();
+        if (player) {
+          player.addEventListener('loadedmetadata', updateDeckTimeDisplay);
+          player.addEventListener('durationchange', updateDeckTimeDisplay);
+          player.addEventListener('timeupdate', function() {
+            updateActiveCaption(true);
+            updateDeckTimeDisplay();
+          });
+          player.addEventListener('seeked', function() {
+            updateActiveCaption(true);
+            updateDeckTimeDisplay();
+          });
+          player.addEventListener('play', function() {
+            updateActiveCaption(true);
+            updateDeckTimeDisplay();
+          });
+          player.addEventListener('pause', updateDeckTimeDisplay);
+          player.addEventListener('ended', updateDeckTimeDisplay);
+        }
+
+        const seek = document.getElementById('deck-seek');
+        if (seek) {
+          seek.addEventListener('input', function() {
+            const player = getAudioPlayer();
+            if (!player || !Number.isFinite(player.duration) || player.duration <= 0) return;
+            player.currentTime = player.duration * (Number(seek.value) / 100);
+            updateDeckTimeDisplay();
+            updateActiveCaption(true);
+          });
+        }
+
+        document.addEventListener('keydown', handleGlobalPlaybackShortcuts);
+
+        renderSyncedTranscript();
+      }
+      initCaptionPlayer();
+      setModelStatus('未加载模型');
+      setAudio(null);
+      setTranscribeButtonState('ready');
+
+      function loadAudio(event) {
+        ensureContext();
+        const file = event.target.files[0];
+        if (!file) return;
+
+        clearSyncedTranscript();
+        TRANSCRIBING = false;
+        setTranscribeButtonState('ready');
+        updateAudioPreview(file);
+
+        printTextarea('正在加载音频：' + file.name + '（' + file.size + ' 字节）');
+        printTextarea('请稍候 …');
+
+        const reader = new FileReader();
+        reader.onload = function() {
+          const buf = new Uint8Array(reader.result);
+
+          context.decodeAudioData(buf.buffer, function(audioBuffer) {
+            const offlineContext = new OfflineAudioContext(audioBuffer.numberOfChannels, audioBuffer.length, audioBuffer.sampleRate);
+            const source = offlineContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(offlineContext.destination);
+            source.start(0);
+
+            offlineContext.startRendering().then(function(renderedBuffer) {
+              audio = renderedBuffer.getChannelData(0);
+              printTextarea('音频已载入（采样点数：' + audio.length + '）');
+
+              if (audio.length > kMaxAudio_s * kSampleRate) {
+                audio = audio.slice(0, kMaxAudio_s * kSampleRate);
+                printTextarea('提示：已截断至前 ' + kMaxAudio_s + ' 秒');
+              }
+              setAudio(audio);
+            });
+          }, function(e) {
+            const friendly = '浏览器无法解析这个音频文件。请转换成 MP3 或 WAV 后再试，或者重新导出/重新发送录音。';
+            printTextarea('解码音频失败：' + e);
+            printTextarea(friendly);
+            audio = null;
+            setAudio(audio, '音频无法解析：请换 MP3/WAV 或重新导出');
+          });
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      // ===== 推理（固定英文） =====
+      function clearTranscriptTerminal() {
+        const output = document.getElementById('output');
+        if (output) output.value = '';
+      }
+
+      function onProcess(translate) {
+        if (!MODEL_READY) {
+          printTextarea('未检测到模型文件 whisper.bin。请先下载模型文件，并在 Model Setup 中选择本地 .bin 模型。');
+          return;
+        }
+
+        if (!instance) {
+          try {
+            instance = Module.init('whisper.bin');
+          } catch (err) {
+            printTextarea('初始化失败：' + (err && err.message || err));
+            TRANSCRIBING = false;
+            setTranscribeButtonState('error');
+            return;
+          }
+          if (instance) {
+            printTextarea('whisper 已初始化（实例 ID：' + instance + '）');
+            setModelStatus('模型已就绪：' + (model_whisper || ''));
+          } else {
+            printTextarea('初始化失败：未获得 whisper 实例');
+            TRANSCRIBING = false;
+            setTranscribeButtonState('error');
+            return;
+          }
+        }
+
+        if (!audio) { printTextarea('未检测到音频数据，请先选择音频文件'); return; }
+
+        clearTranscriptTerminal();
+        TRANSCRIBING = true;
+        setTranscribeButtonState('processing');
+        printTextarea('\n开始转写，可能需要一些时间，请耐心等待 …\n');
+
+        setTimeout(function() {
+          try {
+            const ret = Module.full_default(instance, audio, 'en', nthreads, translate);
+            if (typeof ret === 'number' && ret !== 0) {
+              printTextarea('whisper 返回代码：' + ret);
+              TRANSCRIBING = false;
+              setTranscribeButtonState('error');
+            }
+          } catch (err) {
+            printTextarea('转写过程中出现异常：' + (err && err.message || err));
+            TRANSCRIBING = false;
+            setTranscribeButtonState('error');
+          }
+        }, 100);
+      }
+
+      // —— 从输出区提取“文稿纯文本”：去掉时间戳与日志行
+      function pickTranscriptText() {
+        const raw = document.getElementById('output').value || '';
+        const lines = raw.split(/\r?\n/);
+        let textLines = lines
+          .map(l => parseWhisperTimestampLine(l))
+          .filter(Boolean)
+          .map(segment => segment.text)
+          .filter(Boolean);
+        if (textLines.length === 0 && syncedTranscriptSegments.length > 0) {
+          textLines = syncedTranscriptSegments.map(segment => segment.text).filter(Boolean);
+        }
+        if (textLines.length === 0) {
+          textLines = lines
+            .filter(l => !/^js:\s*/i.test(l))
+            .map(l => l.trim())
+            .filter(Boolean);
+        }
+        return textLines.join('\n');
+      }
+
+      function transcriptAsParagraph() {
+        return pickTranscriptText()
+          .replace(/\s*\r?\n\s*/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      function fallbackCopyText(text) {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        temp.setAttribute('readonly', '');
+        temp.style.position = 'fixed';
+        temp.style.left = '-9999px';
+        document.body.appendChild(temp);
+        temp.select();
+        const ok = document.execCommand('copy');
+        temp.remove();
+        return ok;
+      }
+
+      function hasTranscriptContent() {
+        if (syncedTranscriptSegments.length > 0) return true;
+
+        const output = document.getElementById('output');
+        return Boolean(output && output.value.split(/\r?\n/).some(function(line) {
+          return Boolean(parseWhisperTimestampLine(line));
+        }));
+      }
+
+      async function copyWithAIPrompt() {
+        const transcript = transcriptAsParagraph();
+        if (!hasTranscriptContent() || !transcript) {
+          const message = '尚无可用转录文本。请先转录音频。';
+          printTextarea(message);
+          alert(message);
+          return;
+        }
+
+        // const prompt = [
+        //   'Please correct this spoken English transcript. Keep the meaning. Fix grammar, word choice, and sentence structure. Make it natural but not too formal. Then list the main changes in Simplified Chinese.',
+        //   '',
+        //   'Transcript:',
+        //   transcript
+        // ].join('\n');
+
+        const prompt = [
+          'You are an experienced ESL speaking coach. Please correct this spoken English transcript while keeping the original meaning. Fix grammar, word choice, and sentence structure. Make it natural, clear, and conversational, but not overly formal. Then list the main changes in Simplified Chinese and briefly explain why they are better.',
+          '',
+          'Transcript:',
+          transcript
+        ].join('\n');
+
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(prompt);
+          } else if (!fallbackCopyText(prompt)) {
+            throw new Error('fallback copy failed');
+          }
+          alert('AI润色提示已复制。请将其粘贴到您的AI助手对话框中。');
+        } catch (err) {
+          printTextarea('复制失败：' + (err && err.message || err));
+          alert('Copy failed. Please try again.');
+        }
+      }
+
+      async function copyTranscriptText() {
+        const text = transcriptAsParagraph();
+        if (!text) { alert('还没有可复制的内容：请先完成一次转写。'); return; }
+
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+          } else if (!fallbackCopyText(text)) {
+            throw new Error('fallback copy failed');
+          }
+          alert('已复制纯文本。');
+        } catch (err) {
+          printTextarea('复制失败：' + (err && err.message || err));
+          alert('复制失败。你可以手动选中转写结果复制。');
+        }
+      }
+
+      // —— 触发下载 .txt
+      function downloadTranscript() {
+        const text = pickTranscriptText().trim();
+        if (!text) { alert('还没有可下载的内容：请先完成一次转写。'); return; }
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url  = URL.createObjectURL(blob);
+        const d = new Date(); const pad = n => String(n).padStart(2,'0');
+        const fname = `whisper_transcript_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.txt`;
+        const a = document.createElement('a');
+        a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      }
+    </script>
+
+    <!-- Emscripten 主文件（加版本戳防缓存） -->
+    <script src="main.js?v=20250814"></script>
+  </body>
+</html>
+
