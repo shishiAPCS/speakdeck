@@ -629,19 +629,23 @@
         background: linear-gradient(135deg, #7ed0ff, #356fe6);
       }
       .ai-icon.wenxin::before { content: '◇'; font-size: 19px; }
-      .ai-icon.qingyan {
-        border-radius: 50% 0 50% 50%;
-        color: #0f6b3b;
-        background: linear-gradient(135deg, #c8f7c5, #4dbb7f);
-        transform: rotate(-18deg);
+      
+
+    
+    .ai-icon.gemini {
+        border-radius: 50%;
+        color: #fff;
+        background:
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,.9) 0 16%, transparent 17%),
+        conic-gradient(from 25deg, #4285f4, #7b61ff, #34a853, #fbbc05, #ea4335, #4285f4);
       }
-      .ai-icon.qingyan::before {
-        content: '';
-        width: 12px;
-        height: 2px;
-        background: rgba(15,107,59,.75);
-        transform: rotate(45deg);
+    .ai-icon.gemini::before {
+        content: '✦';
+        font-size: 17px;
+        line-height: 1;
+        text-shadow: 1px 1px 0 rgba(0,0,0,.35);
       }
+    
       .ai-icon.chatgpt {
         border-radius: 50%;
         color: #0f5f43;
@@ -1049,7 +1053,7 @@
               <a class="btn btn-secondary ai-link" href="https://yuanbao.tencent.com/chat/" target="_blank" rel="noopener"><span class="ai-icon yuanbao" aria-hidden="true"></span><span>Yuanbao</span></a>
               <a class="btn btn-secondary ai-link" href="https://chat.qwen.ai/" target="_blank" rel="noopener"><span class="ai-icon qwen" aria-hidden="true"></span><span>Qwen</span></a>
               <a class="btn btn-secondary ai-link" href="https://yiyan.baidu.com/" target="_blank" rel="noopener"><span class="ai-icon wenxin" aria-hidden="true"></span><span>Wenxin</span></a>
-              <a class="btn btn-secondary ai-link" href="https://chatglm.cn/" target="_blank" rel="noopener"><span class="ai-icon qingyan" aria-hidden="true"></span><span>Qingyan</span></a>
+              <a class="btn btn-secondary ai-link" href="https://gemini.google.com/" target="_blank" rel="noopener"><span class="ai-icon gemini" aria-hidden="true"></span><span>Gemini</span></a>
               <a class="btn btn-secondary ai-link" href="https://chatgpt.com/" target="_blank" rel="noopener"><span class="ai-icon chatgpt" aria-hidden="true"></span><span>ChatGPT</span></a>
             </div>
           </div>
