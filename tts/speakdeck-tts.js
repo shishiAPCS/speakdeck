@@ -3,6 +3,28 @@ import { KokoroTTS, TextSplitterStream, detectWebGPU } from './dist/lib/kokoro-b
 const MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 const MODEL_KEY = 'speakdeck-kokoro-q8f16-v1-modelscope';
 const MODEL_URL = 'https://modelscope.cn/models/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/master/onnx/model_q8f16.onnx';
+const LOCAL_VOICE_FILES = {
+  'af_bella.bin': 'tts/voices/af_bella.bin',
+  'am_michael.bin': 'tts/voices/am_michael.bin',
+  'bf_emma.bin': 'tts/voices/bf_emma.bin',
+  'bm_fable.bin': 'tts/voices/bm_fable.bin',
+};
+
+const originalFetch = window.fetch.bind(window);
+window.fetch = (input, init) => {
+  const requestUrl = typeof input === 'string' ? input : input?.url || '';
+  const matchedVoiceFile = Object.keys(LOCAL_VOICE_FILES).find((fileName) =>
+    requestUrl.includes(`/voices/${fileName}`) || requestUrl.endsWith(fileName)
+  );
+
+  if (matchedVoiceFile) {
+    const localUrl = new URL(LOCAL_VOICE_FILES[matchedVoiceFile], window.location.href).href;
+    return originalFetch(localUrl, init);
+  }
+
+  return originalFetch(input, init);
+};
+
 const VOICE_OPTIONS = [
   { id: 'af_bella', label: 'US · Female' },
   { id: 'am_michael', label: 'US · Male' },
