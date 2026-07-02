@@ -1,28 +1,159 @@
 import { KokoroTTS, TextSplitterStream, detectWebGPU } from './dist/lib/kokoro-bundle.es.js';
 
 const MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX';
-const MODEL_KEY = 'speakdeck-kokoro-q8f16-v1-modelscope';
-const MODEL_URL = 'https://modelscope.cn/models/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/master/onnx/model_q8f16.onnx';
+const MODEL_KEY = 'speakdeck-kokoro-q8-quantized-v1-modelscope';
+const MODEL_URL = 'https://modelscope.cn/models/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/master/onnx/model_quantized.onnx';
+const KOKORO_HF_HOSTS = new Set(['huggingface.co', 'hf.co']);
+const KOKORO_REMOTE_PATH_MARKER = `/${MODEL_ID}/resolve/`;
+const KOKORO_ONNX_REMOTE_PATH = 'onnx/model_quantized.onnx';
+const LOCAL_KOKORO_FILES = {
+  'config.json': 'tts/kokoro/config.json',
+  'tokenizer.json': 'tts/kokoro/tokenizer.json',
+  'tokenizer_config.json': 'tts/kokoro/tokenizer_config.json',
+};
 const LOCAL_VOICE_FILES = {
   'af_bella.bin': 'tts/voices/af_bella.bin',
   'am_michael.bin': 'tts/voices/am_michael.bin',
   'bf_emma.bin': 'tts/voices/bf_emma.bin',
   'bm_fable.bin': 'tts/voices/bm_fable.bin',
 };
+const TTS_FETCH_LOG_LIMIT = 100;
+
+let activeKokoroModelData = null;
 
 const originalFetch = window.fetch.bind(window);
-window.fetch = (input, init) => {
-  const requestUrl = typeof input === 'string' ? input : input?.url || '';
-  const matchedVoiceFile = Object.keys(LOCAL_VOICE_FILES).find((fileName) =>
-    requestUrl.includes(`/voices/${fileName}`) || requestUrl.endsWith(fileName)
-  );
+window.__SPEAKDECK_TTS_FETCH_LOG__ = window.__SPEAKDECK_TTS_FETCH_LOG__ || [];
+window.__SPEAKDECK_LAST_TTS_FETCH__ = window.__SPEAKDECK_LAST_TTS_FETCH__ || null;
 
-  if (matchedVoiceFile) {
-    const localUrl = new URL(LOCAL_VOICE_FILES[matchedVoiceFile], window.location.href).href;
-    return originalFetch(localUrl, init);
+function localAssetUrl(path) {
+  return new URL(path, window.location.href).href;
+}
+
+function getRequestUrl(input) {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  return input?.url || '';
+}
+
+function getKokoroRemotePath(requestUrl) {
+  if (!requestUrl) return null;
+
+  let url;
+  try {
+    url = new URL(requestUrl, window.location.href);
+  } catch (_) {
+    return null;
   }
 
-  return originalFetch(input, init);
+  if (!KOKORO_HF_HOSTS.has(url.hostname)) return null;
+  const markerIndex = url.pathname.indexOf(KOKORO_REMOTE_PATH_MARKER);
+  if (markerIndex === -1) return null;
+
+  const afterMarker = url.pathname.slice(markerIndex + KOKORO_REMOTE_PATH_MARKER.length);
+  const firstSlash = afterMarker.indexOf('/');
+  if (firstSlash === -1) return null;
+
+  return decodeURIComponent(afterMarker.slice(firstSlash + 1));
+}
+
+function getTTSFetchRedirect(requestUrl) {
+  const remotePath = getKokoroRemotePath(requestUrl);
+  if (!remotePath) return null;
+
+  if (LOCAL_KOKORO_FILES[remotePath]) {
+    return {
+      kind: 'kokoro-metadata',
+      remotePath,
+      redirectedUrl: localAssetUrl(LOCAL_KOKORO_FILES[remotePath]),
+    };
+  }
+
+  const voiceFile = remotePath.startsWith('voices/') ? remotePath.slice('voices/'.length) : null;
+  if (voiceFile && LOCAL_VOICE_FILES[voiceFile]) {
+    return {
+      kind: 'kokoro-voice',
+      remotePath,
+      redirectedUrl: localAssetUrl(LOCAL_VOICE_FILES[voiceFile]),
+    };
+  }
+
+  if (remotePath === KOKORO_ONNX_REMOTE_PATH && activeKokoroModelData?.byteLength) {
+    return {
+      kind: 'kokoro-onnx-memory',
+      remotePath,
+      inMemory: true,
+    };
+  }
+
+  return null;
+}
+
+function recordTTSFetch(entry) {
+  const normalized = {
+    timestamp: new Date().toISOString(),
+    ...entry,
+  };
+  const log = window.__SPEAKDECK_TTS_FETCH_LOG__;
+  log.push(normalized);
+  if (log.length > TTS_FETCH_LOG_LIMIT) log.splice(0, log.length - TTS_FETCH_LOG_LIMIT);
+  window.__SPEAKDECK_LAST_TTS_FETCH__ = normalized;
+  if (normalized.failed) window.__SPEAKDECK_LAST_FAILED_TTS_FETCH__ = normalized;
+
+  const logger = normalized.failed ? console.warn : console.debug;
+  logger('[SpeakDeck TTS fetch]', normalized);
+  return normalized;
+}
+
+function createModelDataResponse() {
+  const bytes = activeKokoroModelData;
+  return new Response(bytes, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': String(bytes.byteLength),
+      'X-SpeakDeck-Source': 'indexeddb-model-cache',
+    },
+  });
+}
+
+window.fetch = async (input, init) => {
+  const originalUrl = getRequestUrl(input);
+  const redirect = getTTSFetchRedirect(originalUrl);
+  const fetchUrl = redirect?.redirectedUrl || originalUrl;
+  const baseEntry = {
+    originalUrl,
+    redirectedUrl: redirect?.redirectedUrl || null,
+    remotePath: redirect?.remotePath || null,
+    kind: redirect?.kind || 'pass-through',
+  };
+
+  try {
+    const response = redirect?.inMemory
+      ? createModelDataResponse()
+      : await originalFetch(redirect?.redirectedUrl || input, init);
+
+    recordTTSFetch({
+      ...baseEntry,
+      fetchUrl,
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      failed: !response.ok,
+    });
+
+    return response;
+  } catch (error) {
+    recordTTSFetch({
+      ...baseEntry,
+      fetchUrl,
+      status: null,
+      statusText: '',
+      ok: false,
+      failed: true,
+      error: error?.message || String(error),
+    });
+    throw error;
+  }
 };
 
 const VOICE_OPTIONS = [
@@ -92,6 +223,17 @@ function setVoiceStatus() {
 function setStatusLine(text) {
   const el = $('tts-status-line');
   if (el) el.textContent = text;
+}
+
+function formatLastFetchForStatus() {
+  const lastFetch = window.__SPEAKDECK_LAST_TTS_FETCH__;
+  if (!lastFetch?.originalUrl) return '';
+
+  const target = lastFetch.redirectedUrl
+    ? `${lastFetch.originalUrl} -> ${lastFetch.redirectedUrl}`
+    : lastFetch.originalUrl;
+  const detail = lastFetch.error || (lastFetch.status ? `HTTP ${lastFetch.status}` : 'no HTTP status');
+  return ` Last fetch: ${target} · ${detail}`;
 }
 
 function setProgress(percent, text = '') {
@@ -221,7 +363,7 @@ async function saveModelToCache(modelData, source = 'ModelScope auto-download') 
   await state.cacheManager.saveModel(MODEL_KEY, modelData, {
     engine: 'kokoro',
     version: 'Kokoro-82M-v1.0-ONNX',
-    dtype: 'q8/q8f16',
+    dtype: 'q8',
     source,
     url: MODEL_URL,
   });
@@ -323,7 +465,7 @@ async function ensureModelReady() {
     setGenerateEnabled(false);
     setModelStatus('Model setup failed', 'error');
     setGenerationStatus('Setup failed', 'error');
-    setStatusLine(`Automatic setup failed: ${err.message || err}`);
+    setStatusLine(`Automatic setup failed: ${err.message || err}.${formatLastFetchForStatus()}`);
   } finally {
     state.isInitializing = false;
     setGenerateEnabled(!!state.kokoro);
@@ -345,32 +487,35 @@ async function initializeKokoro(modelData) {
   ];
 
   let lastError = null;
-  for (const attempt of attempts) {
-    try {
-      state.computeMode = `${attempt.device.toUpperCase()} · ${attempt.dtype}`;
-      setStatusLine(`Loading Kokoro with ${state.computeMode}...`);
-      const customLoadFn = async () => modelData;
-      state.kokoro = await KokoroTTS.from_pretrained(MODEL_ID, {
-        dtype: attempt.dtype,
-        device: attempt.device,
-        load_fn: customLoadFn,
-      });
-      console.log('Kokoro voices:', state.kokoro.voices);
-      state.isModelReady = true;
-      setModelStatus(`Ready · ${state.computeMode}`, 'ready');
-      setGenerationStatus('Idle · Ready to generate', 'idle');
-      setStatusLine(`TTS model ready. Voice count: ${Object.keys(state.kokoro.voices || {}).length || 'unknown'}.`);
-      setGenerateEnabled(true);
-      return;
-    } catch (err) {
-      console.warn('Kokoro init attempt failed:', attempt, err);
-      lastError = err;
+  activeKokoroModelData = modelData;
+  try {
+    for (const attempt of attempts) {
+      try {
+        state.computeMode = `${attempt.device.toUpperCase()} · ${attempt.dtype}`;
+        setStatusLine(`Loading Kokoro with ${state.computeMode}...`);
+        state.kokoro = await KokoroTTS.from_pretrained(MODEL_ID, {
+          dtype: attempt.dtype,
+          device: attempt.device,
+        });
+        console.log('Kokoro voices:', state.kokoro.voices);
+        state.isModelReady = true;
+        setModelStatus(`Ready · ${state.computeMode}`, 'ready');
+        setGenerationStatus('Idle · Ready to generate', 'idle');
+        setStatusLine(`TTS model ready. Voice count: ${Object.keys(state.kokoro.voices || {}).length || 'unknown'}.`);
+        setGenerateEnabled(true);
+        return;
+      } catch (err) {
+        console.warn('Kokoro init attempt failed:', attempt, err);
+        lastError = err;
+      }
     }
-  }
 
-  // If cached model is incompatible/corrupt, remove it so the next refresh can try again.
-  try { await state.cacheManager?.deleteModel(MODEL_KEY); } catch (_) {}
-  throw lastError || new Error('Kokoro initialization failed.');
+    // If cached model is incompatible/corrupt, remove it so the next refresh can try again.
+    try { await state.cacheManager?.deleteModel(MODEL_KEY); } catch (_) {}
+    throw lastError || new Error('Kokoro initialization failed.');
+  } finally {
+    activeKokoroModelData = null;
+  }
 }
 
 function audioChunkToBlob(chunk) {
