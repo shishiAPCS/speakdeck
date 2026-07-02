@@ -479,12 +479,27 @@ async function initializeKokoro(modelData) {
   setGenerationStatus('Loading Kokoro', 'working');
   setStatusLine('Initializing Kokoro TTS engine...');
 
+  // const hasWebGPU = await detectWebGPU().catch(() => false);
+  // const preferredDevice = hasWebGPU ? 'webgpu' : 'wasm';
+  // const attempts = [
+  //   { device: preferredDevice, dtype: 'q8' },
+  //   { device: 'wasm', dtype: 'q8' },
+  // ];
+
   const hasWebGPU = await detectWebGPU().catch(() => false);
-  const preferredDevice = hasWebGPU ? 'webgpu' : 'wasm';
-  const attempts = [
-    { device: preferredDevice, dtype: 'q8' },
-    { device: 'wasm', dtype: 'q8' },
-  ];
+  const requestedBackend = new URLSearchParams(window.location.search).get('backend');
+
+  // Use WASM by default because WebGPU can initialize successfully but produce
+  // incorrect audio on some browser/GPU combinations. WebGPU remains available
+  // for testing with: tts.html?backend=webgpu
+  const attempts = requestedBackend === 'webgpu' && hasWebGPU
+    ? [
+        { device: 'webgpu', dtype: 'q8' },
+        { device: 'wasm', dtype: 'q8' },
+      ]
+    : [
+        { device: 'wasm', dtype: 'q8' },
+      ];
 
   let lastError = null;
   activeKokoroModelData = modelData;
