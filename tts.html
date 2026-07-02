@@ -1380,7 +1380,7 @@
                 <div class="tts-small-note">Automatic setup should handle the model. Use these only if the first-time download fails, you want to re-import the model manually, or you need to clear the local cache.</div>
                 <button class="btn btn-secondary tts-clear-cache-inline" type="button" id="tts-clear-cache-button">Clear TTS Cache</button>
                 <div class="tts-fallback-row" id="tts-fallback-row">
-                  <a class="btn btn-secondary" id="tts-manual-download" href="https://modelscope.cn/models/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/master/onnx/model_q8f16.onnx" target="_blank" rel="noopener">Download model manually</a>
+                  <a class="btn btn-secondary" id="tts-manual-download" href="https://modelscope.cn/models/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/master/onnx/model_quantized.onnx" target="_blank" rel="noopener">Download model manually</a>
                   <input class="native-file tts-model-import" type="file" id="tts-model-import" accept=".onnx,.bin,application/octet-stream" />
                 </div>
               </div>
@@ -1416,6 +1416,6 @@
 
     <script src="tts/model-cache-manager.js?v=20260701"></script>
     <script src="tts/waveform-player.js?v=20260701"></script>
-    <script type="module" src="tts/speakdeck-tts.js?v=20260702-kokoro-local"></script>
+    <script type="module" src="tts/speakdeck-tts.js?v=20260702-kokoro-local-wasm-default"></script>
   </body>
 </html>
